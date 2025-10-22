@@ -23,11 +23,11 @@ DATASET_CONFIG = {
     
     "MED_WASTE": {
         "local_name": "Medical Waste 4.0", 
-        "num_classes": 12,       
+        "num_classes": 13,       
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
     
-    # 3. REMOTE SENSING (AID Scene)
+    
     "AID": {
         "local_name": "AID", 
         "num_classes": 30,      
