@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.applications import DenseNet121
 from tensorflow.keras.layers import Dense, Dropout, GlobalAveragePooling2D
 from tensorflow.keras.models import Model
+from config import DATASET_CONFIG , IMAGE_SIZE          
 
 
 def build_densenet_model(dataset_key, dropout_rate):
