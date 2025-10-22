@@ -98,9 +98,16 @@ def create_dataset_pipeline(dataset_key):
             Tout=[tf.float32, tf.float32] 
         )
         
-    final_ds = dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
-    
    
+    final_ds = dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    final_ds = final_ds.map(
+        lambda image, label: (
+            tf.ensure_shape(image, IMAGE_SIZE + (CHANNELS,)),
+            tf.ensure_shape(label, tf.TensorShape([config['num_classes']]))
+        ),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    
     final_ds = final_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     
     return final_ds
