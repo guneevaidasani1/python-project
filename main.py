@@ -2,8 +2,8 @@ import tensorflow as tf
 import time
 import os
 
-
-
+tf.config.threading.set_inter_op_parallelism_threads(4) 
+tf.config.threading.set_intra_op_parallelism_threads(8)
 from config import TARGET_DATASET ,HGAO_SEARCH_SPACE,DATASET_CONFIG
 from hgao import hgao_optimization_search
 from model import build_densenet_model
