@@ -25,7 +25,7 @@ DATASET_CONFIG = {
         "num_classes": 4,          
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
-    # Agricultural/Plant Classification
+    
     "PLANTS_TYPE": {
         "local_name": "plants-type-datasets", 
         "num_classes": 30,       
@@ -35,7 +35,7 @@ DATASET_CONFIG = {
 }
 DATA_DIR = "./data/"
 
-
+TARGET_DATASET = DATASET_CONFIG["TARGET_DATASET"]
 
 
 ### HGAO HYPERPARAMETER SEARCH SPACE ###
