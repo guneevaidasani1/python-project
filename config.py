@@ -48,7 +48,7 @@ TARGET_DATASET = DATASET_CONFIG["TARGET_DATASET"]
 HGAO_SEARCH_SPACE = {
     "learning_rate": [1e-5, 1e-1], 
     "dropout_rate": [0.1, 0.6],     
-    "P": 30,              
+    "P": 10,              
     "T": 10,              
     "beta1_weight": [0.1, 0.9], 
     "beta2_weight": [0.1, 0.9], 
