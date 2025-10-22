@@ -37,7 +37,7 @@ DATASET_CONFIG = {
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
     
-    "TARGET_DATASET": "UCMERCED", 
+    "TARGET_DATASET": "MED_WASTE", 
 }
 
 DATA_DIR = "./data/"

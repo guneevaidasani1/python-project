@@ -3,7 +3,7 @@ import time
 import os
 
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # Set logging level to show all messages
+
 
 tf.config.threading.set_inter_op_parallelism_threads(4) 
 tf.config.threading.set_intra_op_parallelism_threads(8)

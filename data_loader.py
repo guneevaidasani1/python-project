@@ -6,31 +6,43 @@ from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
 
 
 
+
+
 def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
     """
-    Decodes the image from the given path. Uses PIL for .TIF files 
-    and standard TF functions for others. Returns preprocessed image and label tensors.
+    Decodes the image, handles TIF files, ensures 3-channels, and converts 
+    to float32 for TensorFlow processing.
     """
- 
     path = path_tensor.numpy().decode('utf-8')
+    img_tensor = None
     
     if path.lower().endswith(('.tif', '.tiff')):
         try:
+            
             img = Image.open(path).convert("RGB")
-            img = img.resize(img_size)
-            img_array = np.array(img, dtype=np.float32)
+            
+            img_array = np.array(img, dtype=np.uint8)
+            img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
         except Exception:
-            # Return a zero placeholder array for corrupted files
-            img_array = np.zeros(img_size + (3,), dtype=np.float32)
+            
+            img_array = np.zeros(img_size + (3,), dtype=np.uint8)
+            img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
             
     else:
+    
         img = tf.io.read_file(path)
-        img = tf.image.decode_image(img, channels=3)
-        img_array = tf.image.convert_image_dtype(img, tf.float32)
-        
-    img_tensor = tf.image.resize(img_array, img_size)
-   
-    return img_tensor / 255.0, label_tensor
+        img_tensor = tf.image.decode_image(img, channels=3)
+    
+ 
+    img_tensor = tf.image.convert_image_dtype(img_tensor, tf.float32)
+    
+
+    img_tensor = tf.image.resize(img_tensor, img_size)
+    
+    img_tensor.set_shape(list(img_size) + [3])
+    
+    
+    return img_tensor, label_tensor
 
 
 
