@@ -1,64 +1,116 @@
 import os
 import tensorflow as tf
+import numpy as np
+from PIL import Image # Essential for reading .tif files
 from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
 
 
+
+def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
+    """
+    Decodes the image from the given path. Uses PIL for .TIF files 
+    and standard TF functions for others. Returns preprocessed image and label tensors.
+    """
+ 
+    path = path_tensor.numpy().decode('utf-8')
+    
+    if path.lower().endswith(('.tif', '.tiff')):
+        try:
+            img = Image.open(path).convert("RGB")
+            img = img.resize(img_size)
+            img_array = np.array(img, dtype=np.float32)
+        except Exception:
+            # Return a zero placeholder array for corrupted files
+            img_array = np.zeros(img_size + (3,), dtype=np.float32)
+            
+    else:
+        img = tf.io.read_file(path)
+        img = tf.image.decode_image(img, channels=3)
+        img_array = tf.image.convert_image_dtype(img, tf.float32)
+        
+    img_tensor = tf.image.resize(img_array, img_size)
+   
+    return img_tensor / 255.0, label_tensor
+
+
+
 def create_dataset_pipeline(dataset_key):
-    """
-    Gathers image data, fixes nested paths for current datasets, and creates an 
-    optimized TF Dataset ready for the HGAO-DenseNet model.
-    """
     config = DATASET_CONFIG.get(dataset_key)
     if not config:
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
-    
+        
     
     base_path_from_config = os.path.join(DATA_DIR, config['local_name'])
-
+    path_suffix = config.get('path_suffix')
     
-    if dataset_key == 'BREAKHIS':
-        final_path = os.path.join(base_path_from_config, 'classificacao_multiclasse')
-        
-    elif dataset_key == 'MED_WASTE':
-        final_path = os.path.join(base_path_from_config, 'Medical Waste 4.0')
-        
-    elif dataset_key == 'AID':
+    if path_suffix:
+        final_path = os.path.join(base_path_from_config, path_suffix)
+    else:
         final_path = base_path_from_config
+        
     
-  
+    print(f"\nCollecting data for {dataset_key} from: {final_path}")
     
-    
-    if not os.path.isdir(final_path):
-        raise FileNotFoundError(
-            f"Could not find required directory: {final_path}. "
-            f"Please verify the exact subfolder names inside your 'data/' directory."
-        )
+   
+    try:
+        class_names = sorted([d for d in os.listdir(final_path) if os.path.isdir(os.path.join(final_path, d))])
+    except FileNotFoundError:
+         raise FileNotFoundError(f"Directory not found: {final_path}. Check your config.py 'local_name' and 'path_suffix'.")
+         
+    num_classes = len(class_names)
 
-    print(f"\nLoading data for {dataset_key} from: {final_path}")
+    if num_classes != config['num_classes']:
+         raise ValueError(
+             f"CRITICAL ERROR: {dataset_key} found {num_classes} classes "
+             f"({class_names}), but config expects {config['num_classes']}! Update config.py."
+         )
     
-    # Keras Utility to load images and labels
-    dataset = tf.keras.utils.image_dataset_from_directory(
-        directory=final_path,
-        labels='inferred',
-        label_mode='categorical',
-        class_names=None, 
-        image_size=IMAGE_SIZE,
-        batch_size=None, 
-        shuffle=True,
-        follow_links=True 
+ 
+    file_pattern = os.path.join(final_path, '*', '*') 
+    
+    list_ds = tf.data.Dataset.list_files(file_pattern, shuffle=True)
+    
+    
+    label_map = tf.lookup.StaticHashTable(
+        tf.lookup.KeyValueTensorInitializer(class_names, tf.constant(list(range(num_classes)), dtype=tf.int32)), 
+        default_value=-1
     )
     
-   #normalizing pixels
-    dataset = dataset.map(lambda image, label: (image / 255.0, label), num_parallel_calls=tf.data.AUTOTUNE)
+    def get_path_and_label(file_path):
+       
+        parts = tf.strings.split(file_path, os.path.sep)
+        label_str = parts[-2]
+        
+        
+        int_label = label_map.lookup(label_str)
+        one_hot_label = tf.one_hot(int_label, num_classes)
+        
+        return file_path, one_hot_label
 
-   
-    dataset = dataset.cache().shuffle(1000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     
-    return dataset
+    dataset = list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
+
+
+    def wrapper_fn(path, label):
+        return tf.py_function(
+            func=_decode_and_preprocess_image,
+            inp=[path, label, IMAGE_SIZE],
+            Tout=[tf.float32, tf.float32] 
+        )
+        
+    final_ds = dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    
+   
+    final_ds = final_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+    
+    return final_ds
+
+
 
 
 if __name__ == '__main__':
-    TEST_DATASET_KEYS = ["BREAKHIS", "MED_WASTE", "AID"] 
+    # Test all three final tasks
+    TEST_DATASET_KEYS = ["UCMERCED", "MED_WASTE", "AID"] 
     
     for key in TEST_DATASET_KEYS:
         print("="*60)
@@ -67,21 +119,15 @@ if __name__ == '__main__':
         try:
             pipeline = create_dataset_pipeline(key)
             
-            
+            # Use .take(1) to check the pipeline quickly
             for images, labels in pipeline.take(1):
                 print(f"\n✅ SUCCESS: Pipeline created for {key}.")
                 print(f"   Batch Image Shape: {images.shape}")
                 print(f"   Batch Label Shape: {labels.shape}")
-                print(f"   Inferred Classes: {labels.shape[1]}")
+                print(f"   Inferred Classes (from pipeline): {labels.shape[1]}")
                 break 
                 
-        except FileNotFoundError as fnf_e:
-            print(f"\n❌ FATAL ERROR: File/Path not found for {key}!")
-            print(f"   Fix the path in config.py or the conditional logic.")
-            print(f"   Error: {fnf_e}")
-            break
         except Exception as e:
             print(f"\n❌ FATAL ERROR: Data loading failed for {key}.")
-            print(f"   Check class counts or image format.")
             print(f"   Error: {e}")
-            break 
+            break
