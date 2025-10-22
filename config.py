@@ -9,36 +9,39 @@ BATCH_SIZE = 32
 
 
 KAGGLE_DATASET_IDS = [
-    "javaidahmadwani/lc25000",
-    "yudhaislamisulistya/plants-type-datasets"
+    "jiayuanchengala/aid-scene-classification-datasets"
 ]
 
+
 DATASET_CONFIG = {
-    
-    "LC25000": {
-        "local_name": "lc25000",  
-        "num_classes": 5,        
-        "input_shape": IMAGE_SIZE + (CHANNELS,),
-    },
-    "SMOKE_CLASSIFICATION": { 
-        "local_name": "IIITDMJ_Smoke", 
-        "num_classes": 4,          
+    "BREAKHIS": {
+        "local_name": "dataset_cancer_v1", 
+        "num_classes": 4,       
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
     
-    "PLANTS_TYPE": {
-        "local_name": "plants-type-datasets", 
-        "num_classes": 30,       
+    
+    "MED_WASTE": {
+        "local_name": "Medical Waste 4.0", 
+        "num_classes": 12,       
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
-    "TARGET_DATASET": "LC25000", 
+    
+    # 3. REMOTE SENSING (AID Scene)
+    "AID": {
+        "local_name": "AID", 
+        "num_classes": 30,      
+        "input_shape": IMAGE_SIZE + (CHANNELS,),
+    },
+    
+    "TARGET_DATASET": "BREAKHIS", 
 }
+
 DATA_DIR = "./data/"
 
 TARGET_DATASET = DATASET_CONFIG["TARGET_DATASET"]
 
 
-### HGAO HYPERPARAMETER SEARCH SPACE ###
 HGAO_SEARCH_SPACE = {
     "learning_rate": [1e-5, 1e-1], 
     "dropout_rate": [0.1, 0.6],    
