@@ -16,6 +16,8 @@ def build_densenet_model(dataset_key, dropout_rate):
     Returns:
         tf.keras.Model: The uncompiled DenseNet model.
     """
+    temp_model = tf.keras.Sequential([tf.keras.layers.Dense(1, input_shape=(1,))])
+    del temp_model
     config = DATASET_CONFIG.get(dataset_key)
     if not config:
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
