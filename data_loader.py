@@ -1,12 +1,12 @@
 import os
 import tensorflow as tf
 import numpy as np
-from PIL import Image # Essential for reading .tif files
-import random # For the 70/10/20 split
+from PIL import Image 
+import random 
 from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
 
 
-def _decode_and_preprocess_image(path_tensor, label_tensor): # <-- FIXED: Removed img_size
+def _decode_and_preprocess_image(path_tensor, label_tensor): 
     """
     Decodes the image, handles TIF files, ensures 3-channels, and converts 
     to float32 for TensorFlow processing.
@@ -24,8 +24,8 @@ def _decode_and_preprocess_image(path_tensor, label_tensor): # <-- FIXED: Remove
             img_array = np.array(img, dtype=np.uint8)
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
         except Exception:
-            # Fallback to black image if TIF loading fails
-            img_array = np.zeros(IMAGE_SIZE + (3,), dtype=np.uint8) # <-- Using global IMAGE_SIZE
+           
+            img_array = np.zeros(IMAGE_SIZE + (3,), dtype=np.uint8) 
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
             
     else:
@@ -37,9 +37,9 @@ def _decode_and_preprocess_image(path_tensor, label_tensor): # <-- FIXED: Remove
     img_tensor = tf.image.convert_image_dtype(img_tensor, tf.float32)
     
 
-    img_tensor = tf.image.resize(img_tensor, IMAGE_SIZE) # <-- Using global IMAGE_SIZE
+    img_tensor = tf.image.resize(img_tensor, IMAGE_SIZE) 
     
-    img_tensor.set_shape(list(IMAGE_SIZE) + [3]) # <-- Using global IMAGE_SIZE
+    img_tensor.set_shape(list(IMAGE_SIZE) + [3])
     
     
     return img_tensor, label_tensor
@@ -69,27 +69,43 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     
    
     try:
+        # Check for classes in the root of the dataset (e.g., train, test, validation folders)
         class_names = sorted([d for d in os.listdir(final_path) if os.path.isdir(os.path.join(final_path, d))])
+        
+        
+        if 'train' in class_names:
+            train_path = os.path.join(final_path, 'train')
+            class_names = sorted([d for d in os.listdir(train_path) if os.path.isdir(os.path.join(train_path, d))])
+
     except FileNotFoundError:
          raise FileNotFoundError(f"Directory not found: {final_path}. Check your config.py 'local_name' and 'path_suffix'.")
          
     num_classes = len(class_names)
 
     if num_classes != config['num_classes']:
+        
          raise ValueError(
              f"CRITICAL ERROR: {dataset_key} found {num_classes} classes "
              f"({class_names}), but config expects {config['num_classes']}! Update config.py."
          )
     
- 
-    file_pattern = os.path.join(final_path, '*', '*') 
+
+    split_folders = ['train', 'validation', 'test']
+    all_file_paths = []
     
-  
+    for split in split_folders:
+        current_pattern = os.path.join(final_path, split, '*', '*') 
+        all_file_paths.extend(tf.io.gfile.glob(current_pattern))
     
-    all_file_paths = tf.io.gfile.glob(file_pattern)
+    
     random.shuffle(all_file_paths)
     
     dataset_size = len(all_file_paths)
+    
+    # Ensure we found the correct number of images (2668)
+    if dataset_size != 2668 and dataset_key == "FETUS_US":
+        print(f"WARNING: Expected 2668 samples for {dataset_key}, but found {dataset_size}. Continuing...")
+    
     train_size = int(train_ratio * dataset_size)
     val_size = int(val_ratio * dataset_size)
     
@@ -116,7 +132,11 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     
     def get_path_and_label(file_path):
        
-        parts = tf.strings.split(file_path, os.path.sep)
+        
+        separator = tf.constant(os.path.sep)
+        parts = tf.strings.split(file_path, separator)
+        
+        
         label_str = parts[-2]
         
         
@@ -134,12 +154,12 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     def wrapper_fn(path, label):
         return tf.py_function(
             func=_decode_and_preprocess_image,
-            inp=[path, label], # <-- FIXED: Removed IMAGE_SIZE from input tensor list
+            inp=[path, label], 
             Tout=[tf.float32, tf.float32] 
         )
         
    
-    # Processing for Training Dataset (includes shuffle)
+    
     final_train_ds = train_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_train_ds = final_train_ds.map(
         lambda image, label: (
@@ -150,7 +170,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_train_ds = final_train_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-    # Processing for Validation Dataset (no shuffle)
+    
     final_val_ds = val_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_val_ds = final_val_ds.map(
         lambda image, label: (
@@ -161,7 +181,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_val_ds = final_val_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-    # Processing for Test Dataset (no shuffle)
+   
     final_test_ds = test_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_test_ds = final_test_ds.map(
         lambda image, label: (
