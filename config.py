@@ -3,7 +3,7 @@ PROJECT_NAME = "HGAO-DenseNet Multi-Domain Classifier"
 SEED = 42             
 IMAGE_SIZE = (224, 224) 
 CHANNELS = 3          
-BATCH_SIZE = 32       
+BATCH_SIZE = 8  
 
 
 KAGGLE_DATASET_IDS = [
@@ -48,8 +48,8 @@ TARGET_DATASET = DATASET_CONFIG["TARGET_DATASET"]
 HGAO_SEARCH_SPACE = {
     "learning_rate": [1e-5, 1e-1], 
     "dropout_rate": [0.1, 0.6],     
-    "P": 5,              
-    "T": 7,              
+    "P": 3,              
+    "T": 5,              
     "beta1_weight": [0.1, 0.9], 
     "beta2_weight": [0.1, 0.9], 
 }
