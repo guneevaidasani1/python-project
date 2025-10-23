@@ -9,6 +9,6 @@ the  HGAO is a two-part, bio-inspired metaheuristic search used in place of manu
 we'll be working on 3 main datasets
 https://zenodo.org/records/7643417
 
-https://www.kaggle.com/datasets/jiayuanchengala/aid-scene-classification-datasets 
+
 https://www.kaggle.com/datasets/abdulhasibuddin/uc-merced-land-use-dataset
 

@@ -8,8 +8,8 @@ BATCH_SIZE = 8
 
 KAGGLE_DATASET_IDS = [
    
-    "abdulhasibuddin/uc-merced-land-use-dataset",
-    "jiayuanchengala/aid-scene-classification-datasets"
+    "abdulhasibuddin/uc-merced-land-use-dataset"
+    
 ]
 
 
@@ -30,14 +30,14 @@ DATASET_CONFIG = {
     },
     
 
-    "AID": {
-        "local_name": "AID", 
-        "num_classes": 30,
+    "FETUS_US": {
+        "local_name": "Ultrasound Fetus Dataset", 
+        "num_classes": 3,
         "path_suffix": None, 
         "input_shape": IMAGE_SIZE + (CHANNELS,),
     },
     
-    "TARGET_DATASET": "MED_WASTE", 
+    "TARGET_DATASET": "FETUS_US", 
 }
 
 DATA_DIR = "./data/"
