@@ -1,11 +1,9 @@
 import os
 import tensorflow as tf
 import numpy as np
-from PIL import Image # Essential for reading .tif files
+from PIL import Image 
+import random 
 from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
-
-
-
 
 
 def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
@@ -46,10 +44,14 @@ def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
 
 
 
-def create_dataset_pipeline(dataset_key):
+def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2): # <-- MODIFIED SIGNATURE AND DEFAULTS
     config = DATASET_CONFIG.get(dataset_key)
     if not config:
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
+        
+    # Check that ratios sum to 1.0 (with a small float tolerance)
+    if not 0.999 <= (train_ratio + val_ratio + test_ratio) <= 1.001:
+        raise ValueError("Train, validation, and test ratios must sum to 1.0.")
         
     
     base_path_from_config = os.path.join(DATA_DIR, config['local_name'])
@@ -80,7 +82,30 @@ def create_dataset_pipeline(dataset_key):
  
     file_pattern = os.path.join(final_path, '*', '*') 
     
-    list_ds = tf.data.Dataset.list_files(file_pattern, shuffle=True)
+
+    
+    all_file_paths = tf.io.gfile.glob(file_pattern)
+    random.shuffle(all_file_paths)
+    
+    dataset_size = len(all_file_paths)
+    train_size = int(train_ratio * dataset_size)
+    val_size = int(val_ratio * dataset_size)
+    
+    
+    train_paths = all_file_paths[:train_size]
+    val_paths = all_file_paths[train_size:train_size + val_size]
+    test_paths = all_file_paths[train_size + val_size:]
+    
+ 
+    train_list_ds = tf.data.Dataset.from_tensor_slices(train_paths)
+    val_list_ds = tf.data.Dataset.from_tensor_slices(val_paths)
+    test_list_ds = tf.data.Dataset.from_tensor_slices(test_paths)
+    
+    print(f"   Total Samples: {dataset_size}")
+    print(f"   Train Samples: {len(train_paths)} ({train_ratio*100:.0f}%)")
+    print(f"   Validation Samples: {len(val_paths)} ({val_ratio*100:.0f}%)")
+    print(f"   Test Samples: {len(test_paths)} ({test_ratio*100:.0f}%)")
+    
     
     
     label_map = tf.lookup.StaticHashTable(
@@ -100,7 +125,10 @@ def create_dataset_pipeline(dataset_key):
         return file_path, one_hot_label
 
     
-    dataset = list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
+    
+    train_dataset = train_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
+    val_dataset = val_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
+    test_dataset = test_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
 
 
     def wrapper_fn(path, label):
@@ -111,24 +139,43 @@ def create_dataset_pipeline(dataset_key):
         )
         
    
-    final_ds = dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
-    final_ds = final_ds.map(
+    
+    final_train_ds = train_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    final_train_ds = final_train_ds.map(
         lambda image, label: (
             tf.ensure_shape(image, IMAGE_SIZE + (CHANNELS,)),
             tf.ensure_shape(label, tf.TensorShape([config['num_classes']]))
         ),
         num_parallel_calls=tf.data.AUTOTUNE
     )
-    
-    final_ds = final_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
-    
-    return final_ds
+    final_train_ds = final_train_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
+    final_val_ds = val_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    final_val_ds = final_val_ds.map(
+        lambda image, label: (
+            tf.ensure_shape(image, IMAGE_SIZE + (CHANNELS,)),
+            tf.ensure_shape(label, tf.TensorShape([config['num_classes']]))
+        ),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    final_val_ds = final_val_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
+    
+    final_test_ds = test_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
+    final_test_ds = final_test_ds.map(
+        lambda image, label: (
+            tf.ensure_shape(image, IMAGE_SIZE + (CHANNELS,)),
+            tf.ensure_shape(label, tf.TensorShape([config['num_classes']]))
+        ),
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    final_test_ds = final_test_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+    
+    return final_train_ds, final_val_ds, final_test_ds # <-- MODIFIED RETURN VALUE
 
 
 if __name__ == '__main__':
-    # Test all three final tasks
+    
     TEST_DATASET_KEYS = ["UCMERCED", "MED_WASTE", "AID"] 
     
     for key in TEST_DATASET_KEYS:
@@ -136,14 +183,24 @@ if __name__ == '__main__':
         print(f"--- STARTING DATA LOADER TEST FOR: {key} ---")
         
         try:
-            pipeline = create_dataset_pipeline(key)
+         
+            train_pipeline, val_pipeline, test_pipeline = create_dataset_pipeline(key)
             
-            # Use .take(1) to check the pipeline quickly
-            for images, labels in pipeline.take(1):
-                print(f"\n✅ SUCCESS: Pipeline created for {key}.")
+            
+            for images, labels in train_pipeline.take(1):
+                print(f"\n✅ SUCCESS: Train Pipeline created for {key}.")
                 print(f"   Batch Image Shape: {images.shape}")
                 print(f"   Batch Label Shape: {labels.shape}")
-                print(f"   Inferred Classes (from pipeline): {labels.shape[1]}")
+                break 
+                
+            for images, labels in val_pipeline.take(1):
+                print(f"\n✅ SUCCESS: Validation Pipeline created for {key}.")
+                print(f"   Batch Image Shape: {images.shape}")
+                break 
+                
+            for images, labels in test_pipeline.take(1):
+                print(f"\n✅ SUCCESS: Test Pipeline created for {key}.")
+                print(f"   Batch Image Shape: {images.shape}")
                 break 
                 
         except Exception as e:

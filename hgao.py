@@ -11,7 +11,8 @@ from data_loader import create_dataset_pipeline
 
 def evaluate_fitness(hyperparameters, dataset_key):
     try:
-        train_ds = create_dataset_pipeline(dataset_key)
+        
+        train_ds, val_ds, _ = create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2)
     except Exception as e:
         
         print(f"Error loading data: {e}. Returning low fitness.")
@@ -31,20 +32,22 @@ def evaluate_fitness(hyperparameters, dataset_key):
     history = model.fit(
         train_ds,
         epochs=5,
-        verbose=0 
+        verbose=0,
+        validation_data=val_ds # <-- Use validation set
     )
     
    
-    fitness_value = history.history['accuracy'][-1]
     
-    del model #del model
+    fitness_value = history.history['val_accuracy'][-1]
+    
+    del model 
     
     return fitness_value
 
 
 def hgao_optimization_search(dataset_key):
-    P = HGAO_SEARCH_SPACE['P'] # Now 10
-    T = HGAO_SEARCH_SPACE['T'] # Now 10
+    P = HGAO_SEARCH_SPACE['P']
+    T = HGAO_SEARCH_SPACE['T'] 
     search_bounds = {k: v for k, v in HGAO_SEARCH_SPACE.items() if isinstance(v, list)}
 
     population = []
@@ -62,7 +65,7 @@ def hgao_optimization_search(dataset_key):
     
     for t in range(T):
         
-        #cleanup
+        
         tf.keras.backend.clear_session()
         gc.collect()
         try:
@@ -92,7 +95,7 @@ def hgao_optimization_search(dataset_key):
         
         
         print("\n--- ITERATION SUMMARY ---")
-        print(f"| Current Best Fitness (Accuracy): {best_fitness:.4f}")
+        print(f"| Current Best Fitness (Validation Accuracy): {best_fitness:.4f}")
         print(f"| Optimal LR: {best_hyperparameters['learning_rate']:.6f}, Dropout: {best_hyperparameters['dropout_rate']:.3f}")
         print("-------------------------\n")
         
