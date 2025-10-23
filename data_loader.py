@@ -1,15 +1,17 @@
 import os
 import tensorflow as tf
 import numpy as np
-from PIL import Image 
-import random 
+from PIL import Image # Essential for reading .tif files
+import random # For the 70/10/20 split
 from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
 
 
-def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
+def _decode_and_preprocess_image(path_tensor, label_tensor): # <-- FIXED: Removed img_size
     """
     Decodes the image, handles TIF files, ensures 3-channels, and converts 
     to float32 for TensorFlow processing.
+    
+    NOTE: Uses global IMAGE_SIZE imported from config.
     """
     path = path_tensor.numpy().decode('utf-8')
     img_tensor = None
@@ -22,8 +24,8 @@ def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
             img_array = np.array(img, dtype=np.uint8)
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
         except Exception:
-            
-            img_array = np.zeros(img_size + (3,), dtype=np.uint8)
+            # Fallback to black image if TIF loading fails
+            img_array = np.zeros(IMAGE_SIZE + (3,), dtype=np.uint8) # <-- Using global IMAGE_SIZE
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
             
     else:
@@ -35,16 +37,16 @@ def _decode_and_preprocess_image(path_tensor, label_tensor, img_size):
     img_tensor = tf.image.convert_image_dtype(img_tensor, tf.float32)
     
 
-    img_tensor = tf.image.resize(img_tensor, img_size)
+    img_tensor = tf.image.resize(img_tensor, IMAGE_SIZE) # <-- Using global IMAGE_SIZE
     
-    img_tensor.set_shape(list(img_size) + [3])
+    img_tensor.set_shape(list(IMAGE_SIZE) + [3]) # <-- Using global IMAGE_SIZE
     
     
     return img_tensor, label_tensor
 
 
 
-def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2): # <-- MODIFIED SIGNATURE AND DEFAULTS
+def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ratio=0.2): 
     config = DATASET_CONFIG.get(dataset_key)
     if not config:
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
@@ -82,7 +84,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
  
     file_pattern = os.path.join(final_path, '*', '*') 
     
-
+  
     
     all_file_paths = tf.io.gfile.glob(file_pattern)
     random.shuffle(all_file_paths)
@@ -91,12 +93,10 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     train_size = int(train_ratio * dataset_size)
     val_size = int(val_ratio * dataset_size)
     
-    
     train_paths = all_file_paths[:train_size]
     val_paths = all_file_paths[train_size:train_size + val_size]
     test_paths = all_file_paths[train_size + val_size:]
     
- 
     train_list_ds = tf.data.Dataset.from_tensor_slices(train_paths)
     val_list_ds = tf.data.Dataset.from_tensor_slices(val_paths)
     test_list_ds = tf.data.Dataset.from_tensor_slices(test_paths)
@@ -106,6 +106,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     print(f"   Validation Samples: {len(val_paths)} ({val_ratio*100:.0f}%)")
     print(f"   Test Samples: {len(test_paths)} ({test_ratio*100:.0f}%)")
     
+  
     
     
     label_map = tf.lookup.StaticHashTable(
@@ -125,7 +126,6 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
         return file_path, one_hot_label
 
     
-    
     train_dataset = train_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
     val_dataset = val_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
     test_dataset = test_list_ds.map(get_path_and_label, num_parallel_calls=tf.data.AUTOTUNE)
@@ -134,12 +134,12 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     def wrapper_fn(path, label):
         return tf.py_function(
             func=_decode_and_preprocess_image,
-            inp=[path, label, IMAGE_SIZE],
+            inp=[path, label], # <-- FIXED: Removed IMAGE_SIZE from input tensor list
             Tout=[tf.float32, tf.float32] 
         )
         
    
-    
+    # Processing for Training Dataset (includes shuffle)
     final_train_ds = train_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_train_ds = final_train_ds.map(
         lambda image, label: (
@@ -150,6 +150,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_train_ds = final_train_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
+    # Processing for Validation Dataset (no shuffle)
     final_val_ds = val_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_val_ds = final_val_ds.map(
         lambda image, label: (
@@ -160,7 +161,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_val_ds = final_val_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-    
+    # Processing for Test Dataset (no shuffle)
     final_test_ds = test_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_test_ds = final_test_ds.map(
         lambda image, label: (
@@ -171,7 +172,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_test_ds = final_test_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
     
-    return final_train_ds, final_val_ds, final_test_ds # <-- MODIFIED RETURN VALUE
+    return final_train_ds, final_val_ds, final_test_ds 
 
 
 if __name__ == '__main__':
@@ -183,7 +184,7 @@ if __name__ == '__main__':
         print(f"--- STARTING DATA LOADER TEST FOR: {key} ---")
         
         try:
-         
+            
             train_pipeline, val_pipeline, test_pipeline = create_dataset_pipeline(key)
             
             
