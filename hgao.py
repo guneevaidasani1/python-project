@@ -7,21 +7,7 @@ from config import HGAO_SEARCH_SPACE, DATASET_CONFIG, IMAGE_SIZE, CHANNELS
 from model import build_densenet_model
 from data_loader import create_dataset_pipeline
 
-# In hgao.py (right after imports)
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0' # Show all logs
-tf.debugging.set_log_device_placement(True)
 
-# Run a simple check operation to force device placement logging
-try:
-    with tf.device("/GPU:0"):
-        a = tf.constant([1.0, 2.0])
-        b = tf.constant([3.0, 4.0])
-        c = a * b
-    print("TF Device Check: Passed!")
-except Exception as e:
-    print(f"TF Device Check: Failed to assign to GPU.")
-    # Look for the error message here.
 
 def evaluate_fitness(hyperparameters, dataset_key):
     try:
