@@ -11,7 +11,7 @@ from model import build_densenet_model
 from data_loader import create_dataset_pipeline
 
 
-FINAL_TRAINING_EPOCHS = 20
+FINAL_TRAINING_EPOCHS = 40
 
 
 def main():

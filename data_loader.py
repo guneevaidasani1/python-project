@@ -6,7 +6,7 @@ import random
 from config import DATASET_CONFIG, IMAGE_SIZE, CHANNELS, DATA_DIR, BATCH_SIZE
 
 
-def _decode_and_preprocess_image(path_tensor, label_tensor): 
+def _decode_and_preprocess_image(path_tensor, label_tensor):
     """
     Decodes the image, handles TIF files, ensures 3-channels, and converts 
     to float32 for TensorFlow processing.
@@ -24,7 +24,7 @@ def _decode_and_preprocess_image(path_tensor, label_tensor):
             img_array = np.array(img, dtype=np.uint8)
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
         except Exception:
-           
+            
             img_array = np.zeros(IMAGE_SIZE + (3,), dtype=np.uint8) 
             img_tensor = tf.convert_to_tensor(img_array, dtype=tf.uint8)
             
@@ -69,7 +69,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     
    
     try:
-        # Check for classes in the root of the dataset (e.g., train, test, validation folders)
+        
         class_names = sorted([d for d in os.listdir(final_path) if os.path.isdir(os.path.join(final_path, d))])
         
         
@@ -83,28 +83,49 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     num_classes = len(class_names)
 
     if num_classes != config['num_classes']:
-        
+         
          raise ValueError(
              f"CRITICAL ERROR: {dataset_key} found {num_classes} classes "
              f"({class_names}), but config expects {config['num_classes']}! Update config.py."
          )
     
-
-    split_folders = ['train', 'validation', 'test']
-    all_file_paths = []
     
-    for split in split_folders:
-        current_pattern = os.path.join(final_path, split, '*', '*') 
-        all_file_paths.extend(tf.io.gfile.glob(current_pattern))
+    
+    
+    
+    if dataset_key in ["UCMERCED", "AID", "MED_WASTE"]: 
+        
+        file_pattern = os.path.join(final_path, '*', '*') 
+        all_file_paths = tf.io.gfile.glob(file_pattern)
+        
+    
+    elif dataset_key in ["FETUS_US"]:
+        split_folders = ['train', 'validation', 'test']
+        all_file_paths = []
+        
+        for split in split_folders:
+            
+            current_pattern = os.path.join(final_path, split, '*', '*') 
+            all_file_paths.extend(tf.io.gfile.glob(current_pattern))
+    
+    else:
+        
+        file_pattern = os.path.join(final_path, '*', '*') 
+        all_file_paths = tf.io.gfile.glob(file_pattern)
+        
+   
     
     
     random.shuffle(all_file_paths)
     
     dataset_size = len(all_file_paths)
     
-    # Ensure we found the correct number of images (2668)
-    if dataset_size != 2668 and dataset_key == "FETUS_US":
-        print(f"WARNING: Expected 2668 samples for {dataset_key}, but found {dataset_size}. Continuing...")
+   
+    if dataset_size == 0:
+        raise FileNotFoundError(
+            f"No files found at expected path: {final_path}. "
+            f"Check your file globbing pattern or ensure the dataset is copied correctly."
+        )
     
     train_size = int(train_ratio * dataset_size)
     val_size = int(val_ratio * dataset_size)
@@ -170,7 +191,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_train_ds = final_train_ds.cache().shuffle(10000).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-    
+    #
     final_val_ds = val_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_val_ds = final_val_ds.map(
         lambda image, label: (
@@ -181,7 +202,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     )
     final_val_ds = final_val_ds.cache().batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
-   
+    
     final_test_ds = test_dataset.map(wrapper_fn, num_parallel_calls=tf.data.AUTOTUNE)
     final_test_ds = final_test_ds.map(
         lambda image, label: (
