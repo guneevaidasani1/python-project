@@ -7,11 +7,10 @@ import sys
 from setup import unzip_datasets 
 
 
-# Set threading configurations
 tf.config.threading.set_inter_op_parallelism_threads(4) 
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# Changed import to only bring in HGAO_SEARCH_SPACE and DATASET_CONFIG.
+
 from config import HGAO_SEARCH_SPACE, DATASET_CONFIG
 from hgao import hgao_optimization_search
 from model import build_densenet_model
@@ -26,7 +25,7 @@ def get_user_dataset_choice(dataset_config):
     Prompts the user to select a target dataset from the available options,
     displaying the local_name but returning the key.
     """
-    # Filter out any non-dataset keys (like "TARGET_DATASET" string) from the config
+    
     dataset_items = [(k, v) for k, v in dataset_config.items() if isinstance(v, dict)]
     dataset_keys = [k for k, v in dataset_items]
     
@@ -37,14 +36,14 @@ def get_user_dataset_choice(dataset_config):
     print("\n" + "="*60)
     print("Hope you have the datasets on your local device")
     
-    # Construct the desired prompt string using the 'local_name'
+    
     prompt_parts = []
     for i, (key, config) in enumerate(dataset_items):
-        local_name = config.get('local_name', key) # Fallback to key if local_name is missing
+        local_name = config.get('local_name', key)
         prompt_parts.append(f"{i+1} for {local_name}")
     
-    # Format the prompt: "enter 1 for UCMerced_LandUse, 2 for Medical Waste 4.0, and so on"
-    prompt_message = "enter " + ", ".join(prompt_parts)
+   
+    prompt_message = "Enter " + ", ".join(prompt_parts)
     prompt_message += f" (Total {len(dataset_keys)} options)"
 
     print(prompt_message)
@@ -55,7 +54,7 @@ def get_user_dataset_choice(dataset_config):
             choice = input("Your choice: ")
             choice_index = int(choice) - 1
             if 0 <= choice_index < len(dataset_keys):
-                # Return the internal key, but the user saw the full name
+                
                 chosen_key = dataset_keys[choice_index]
                 print(f"\nSelected Dataset: {chosen_key} ({dataset_config[chosen_key]['local_name']})\n")
                 return chosen_key
@@ -67,10 +66,10 @@ def get_user_dataset_choice(dataset_config):
 
 def main():
     
-    # 🌟 NEW STEP: Run the setup script to ensure data is unzipped 🌟
+    
     unzip_datasets()
     
-    # Get the target dataset from user input
+    
     TARGET_DATASET = get_user_dataset_choice(DATASET_CONFIG)
     
     start_time = time.time()
@@ -97,7 +96,7 @@ def main():
     #final model train
     print("\nPHASE 2: Final Model Training with Optimized Parameters (Full Epochs)...")
     
-    # CRITICAL FIX: Unpack the three returned datasets (train, val, test)
+   
     final_train_ds, final_val_ds, final_test_ds = create_dataset_pipeline(TARGET_DATASET)
     
     #Using hgao we build the denze net model

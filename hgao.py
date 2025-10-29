@@ -33,7 +33,7 @@ def evaluate_fitness(hyperparameters, dataset_key):
         train_ds,
         epochs=5,
         verbose=0,
-        validation_data=val_ds # <-- Use validation set
+        validation_data=val_ds 
     )
     
    

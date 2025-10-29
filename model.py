@@ -23,13 +23,12 @@ def build_densenet_model(dataset_key, dropout_rate):
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
 
     
-    num_classes = config['num_classes'] ##number of possible classifications
-    input_shape = config['input_shape'] #dimensions of the image
+    num_classes = config['num_classes'] 
+    input_shape = config['input_shape'] 
 
     print(f"-> Building DenseNet-121 for {dataset_key} with {num_classes} classes...")
 
-    # 1. Load the DenseNet-121 base model for Transfer Learning
-    # We use 'imagenet' weights and exclude the original top layers (include_top=False)
+    
     base_model = DenseNet121(
         weights='imagenet',
         include_top=False,  
@@ -39,16 +38,16 @@ def build_densenet_model(dataset_key, dropout_rate):
     x = base_model.output
     x = GlobalAveragePooling2D()(x) 
 
-    # This is the Dropout layer whose rate HGAO will tune
+    
     x = Dropout(dropout_rate)(x)
 
-    # Final output layer (softmax for multi-class classification)
+    
     predictions = Dense(num_classes, activation='softmax')(x)
 
-    # Combine the base model and the new layers
+    
     model = Model(inputs=base_model.input, outputs=predictions)
 
-    # Freeze the base layers for initial rapid tuning (Transfer Learning)
+    
     for layer in base_model.layers:
         layer.trainable = False
         

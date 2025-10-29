@@ -51,7 +51,7 @@ def create_dataset_pipeline(dataset_key, train_ratio=0.7, val_ratio=0.1, test_ra
     if not config:
         raise ValueError(f"Dataset key '{dataset_key}' not found in config.")
         
-    # Check that ratios sum to 1.0 (with a small float tolerance)
+    # check that ratios sum to 1.0 (with a small float tolerance)
     if not 0.999 <= (train_ratio + val_ratio + test_ratio) <= 1.001:
         raise ValueError("Train, validation, and test ratios must sum to 1.0.")
         

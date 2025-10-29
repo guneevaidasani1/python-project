@@ -8,7 +8,7 @@ def unzip_datasets():
     Checks if the data directory exists and contains the unzipped files.
     If not, it attempts to unzip the corresponding zip files into DATA_DIR.
     """
-    # 🚨 CRITICAL: List the exact zip file names here, corresponding to config.py
+    
     required_zips = [
         "UCMerced_LandUse.zip",
         "Medical_Waste_4_0.zip",
@@ -25,14 +25,14 @@ def unzip_datasets():
 
     all_unzipped = True
     
-    # Filter for only the actual dataset configs
+    
     datasets_to_check = {k: v for k, v in DATASET_CONFIG.items() if isinstance(v, dict)}
     
     for key, config in datasets_to_check.items():
         local_name = config['local_name']
         zip_file = config.get('zip_file_name')
         
-        # Determine the expected final path of the unzipped data
+        
         if config.get('path_suffix'):
             expected_path = os.path.join(DATA_DIR, local_name, config['path_suffix'])
         else:
@@ -48,12 +48,12 @@ def unzip_datasets():
             print(f"❌ ERROR: Zip file name not defined for {local_name} in config.py.")
             sys.exit(1)
             
-        zip_path = os.path.join(".", zip_file) # Assumes zip files are in the project root
+        zip_path = os.path.join(".", zip_file) 
         
         if os.path.exists(zip_path):
             print(f"📦 Unzipping '{zip_file}' to '{DATA_DIR}'...")
             try:
-                # Note: Extracting to DATA_DIR (./data/) based on your config
+                
                 with zipfile.ZipFile(zip_path, 'r') as zf:
                     zf.extractall(DATA_DIR)
                 print(f"🎉 Success! '{zip_file}' extracted.")
