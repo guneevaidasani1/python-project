@@ -1,4 +1,3 @@
-
 PROJECT_NAME = "HGAO-DenseNet Multi-Domain Classifier"
 SEED = 42             
 IMAGE_SIZE = (224, 224) 
@@ -19,6 +18,7 @@ DATASET_CONFIG = {
         "num_classes": 21,       
         "path_suffix": "Images", 
         "input_shape": IMAGE_SIZE + (CHANNELS,),
+        "zip_file_name": "UCMerced_LandUse.zip",
     },
     
 
@@ -27,14 +27,16 @@ DATASET_CONFIG = {
         "num_classes": 13, 
         "path_suffix": "Medical Waste 4.0", 
         "input_shape": IMAGE_SIZE + (CHANNELS,),
+        "zip_file_name": "Medical_Waste_4_0.zip",
     },
     
 
     "FETUS_US": {
         "local_name": "Ultrasound Fetus Dataset", 
         "num_classes": 3,
-        "path_suffix": None, 
+        "path_suffix": "Ultrasound Fetus Dataset/Data/Data", 
         "input_shape": IMAGE_SIZE + (CHANNELS,),
+        "zip_file_name": "Fetus_US.zip",
     },
     
     "TARGET_DATASET": "FETUS_US", 

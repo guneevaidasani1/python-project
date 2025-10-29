@@ -4,11 +4,14 @@ import os
 import sys
 
 
+from setup import unzip_datasets 
+
+
+# Set threading configurations
 tf.config.threading.set_inter_op_parallelism_threads(4) 
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Changed import to only bring in HGAO_SEARCH_SPACE and DATASET_CONFIG.
-# TARGET_DATASET is now determined by user input.
 from config import HGAO_SEARCH_SPACE, DATASET_CONFIG
 from hgao import hgao_optimization_search
 from model import build_densenet_model
@@ -63,9 +66,9 @@ def get_user_dataset_choice(dataset_config):
 
 
 def main():
-    """
-    Runs the HGAO optimization, then trains the final model.
-    """
+    
+    # 🌟 NEW STEP: Run the setup script to ensure data is unzipped 🌟
+    unzip_datasets()
     
     # Get the target dataset from user input
     TARGET_DATASET = get_user_dataset_choice(DATASET_CONFIG)
