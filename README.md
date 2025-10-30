@@ -45,6 +45,8 @@ Download the dataset ZIP files to your local device. The project is designed to 
 * **UC Merced Land Use Dataset**:
     * **[Download Link (Kaggle)](https://www.kaggle.com/datasets/abdulhasibuddin/uc-merced-land-use-dataset)**
 
+---
+
 ### 2. 📂 Rename Datasets and Place in Root Directory
 
 Ensure the downloaded ZIP files are placed directly in the **root directory** of your project repository and are named precisely as follows:
@@ -55,17 +57,11 @@ Ensure the downloaded ZIP files are placed directly in the **root directory** of
 
 Your root directory should contain all Python files and the three ZIP files.
 
+---
+
 ### 3. 🛠️ Install Project Requirements
 
 Navigate to the project's root directory in your terminal and install all necessary Python libraries using the provided requirements file:
 
 ```bash
 pip install -r requirements.txt
-
-### 4. ▶️ Execute Main Script
-
-The script will automatically unzip and extract the data files into the data folder upon first execution. It will then prompt you to choose which dataset you wish to run the optimization on. Execute the main script to initiate the hyperparameter search for the DenseNet model:
-
-```bash
-python main.py
-
