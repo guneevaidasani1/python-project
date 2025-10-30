@@ -64,7 +64,7 @@ def unzip_datasets():
         else:
             print(f"⚠️ WARNING: Expected directory '{expected_path}' not found.")
             print(f"    AND required zip file '{zip_file}' not found at '{zip_path}'.")
-            print("    Please ensure the professor has run the unzip code/script.")
+            print("    Please ensure you hav run the unzip code/script.")
             sys.exit(1)
 
     if all_unzipped:
