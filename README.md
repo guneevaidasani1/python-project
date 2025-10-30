@@ -66,6 +66,7 @@ Navigate to the project's root directory in your terminal and install all necess
 ```bash
 pip install -r requirements.txt
 
+'''
 ---
 
 ### 4. ▶️ Execute Main Script
