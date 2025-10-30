@@ -65,3 +65,14 @@ Navigate to the project's root directory in your terminal and install all necess
 
 ```bash
 pip install -r requirements.txt
+
+---
+
+### 4. ▶️ Execute Main Script
+
+The script will automatically unzip and extract the data files into the **`data/`** folder upon first execution.  
+It will then prompt you to choose which dataset you wish to run the optimization on.  
+Execute the main script to initiate the hyperparameter search for the DenseNet model:
+
+```bash
+python main.py
